@@ -1,0 +1,25 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('api', {
+  getPlatform: () => ipcRenderer.invoke('get-platform'),
+  checkBrew: () => ipcRenderer.invoke('check-brew'),
+  checkGit: () => ipcRenderer.invoke('check-git'),
+  checkNode: () => ipcRenderer.invoke('check-node'),
+  checkGh: () => ipcRenderer.invoke('check-gh'),
+  installBrew: () => ipcRenderer.invoke('install-brew'),
+  installGit: () => ipcRenderer.invoke('install-git'),
+  installNode: () => ipcRenderer.invoke('install-node'),
+  installGh: () => ipcRenderer.invoke('install-gh'),
+  checkGhAuth: () => ipcRenderer.invoke('check-gh-auth'),
+  ghLogin: () => ipcRenderer.invoke('gh-login'),
+  ghLoginWait: () => ipcRenderer.invoke('gh-login-wait'),
+  getGhUsername: () => ipcRenderer.invoke('get-gh-username'),
+  createFromTemplate: (repoName) => ipcRenderer.invoke('create-from-template', repoName),
+  listMyRepos: () => ipcRenderer.invoke('list-my-repos'),
+  cloneRepo: (repoName, targetDir, owner) => ipcRenderer.invoke('clone-repo', { repoName, targetDir, owner }),
+  cloneExisting: (repoName, targetDir, owner) => ipcRenderer.invoke('clone-existing', { repoName, targetDir, owner }),
+  selectFolder: () => ipcRenderer.invoke('select-folder'),
+  initProject: (projectPath, repoName) => ipcRenderer.invoke('init-project', { projectPath, repoName }),
+  onInitLog: (callback) => ipcRenderer.on('init-log', (_, data) => callback(data)),
+  openInIde: (projectPath, ide) => ipcRenderer.invoke('open-in-ide', { projectPath, ide }),
+});

@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JustVibeIt Installer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface-2: #1a1a1a;
+      --border: #262626;
+      --border-light: #333;
+      --text: #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --success: #22c55e;
+      --success-bg: rgba(34, 197, 94, 0.1);
+      --error: #ef4444;
+      --error-bg: rgba(239, 68, 68, 0.08);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.08);
+      --info-bg: rgba(99, 102, 241, 0.08);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      -webkit-app-region: drag;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-app-region: no-drag;
+    }
+
+    /* Header */
+    .header {
+      padding: 40px 32px 0;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .logo-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 400;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 24px 32px 20px;
+      flex-shrink: 0;
+    }
+    .progress-step {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+    .progress-step.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
+    }
+    .progress-step.done {
+      background: var(--success);
+      border-color: var(--success);
+      color: white;
+    }
+    .progress-line {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      transition: background 0.3s ease;
+    }
+    .progress-line.done { background: var(--success); }
+
+    /* Content */
+    .content {
+      flex: 1;
+      padding: 0 32px 32px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .content::-webkit-scrollbar { width: 4px; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .step { display: none; flex-direction: column; flex: 1; }
+    .step.active { display: flex; }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent-light);
+      margin-bottom: 6px;
+    }
+    .step-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    /* Status items */
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .status-item.ok {
+      border-color: rgba(34, 197, 94, 0.2);
+      background: var(--success-bg);
+    }
+    .status-item.fail {
+      border-color: rgba(239, 68, 68, 0.2);
+      background: var(--error-bg);
+    }
+    .status-item.warn {
+      border-color: rgba(245, 158, 11, 0.2);
+      background: var(--warning-bg);
+    }
+    .status-item.info {
+      border-color: rgba(99, 102, 241, 0.2);
+      background: var(--info-bg);
+    }
+    .status-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+    .status-text { flex: 1; color: var(--text-secondary); }
+    .status-text strong { color: var(--text); }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+    }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-primary:hover:not(:disabled) { background: #5558e6; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); border-color: var(--border-light); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover:not(:disabled) { background: #16a34a; }
+    .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 6px; }
+    .btn-block { width: 100%; }
+    .btn-group { display: flex; gap: 8px; margin-top: auto; padding-top: 20px; }
+    .btn-group .btn { flex: 1; }
+
+    /* Inputs */
+    .field { margin-bottom: 16px; }
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .field-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .field-input:focus { border-color: var(--accent); }
+    .field-input::placeholder { color: var(--text-muted); }
+    .field-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    .folder-row { display: flex; gap: 8px; }
+    .folder-row .field-input { flex: 1; }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent-light);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    .spinner-white { border-color: rgba(255,255,255,0.2); border-top-color: white; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Device code */
+    .code-box {
+      text-align: center;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin: 12px 0;
+    }
+    .code-value {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 6px;
+      color: var(--accent-light);
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      margin: 8px 0;
+      user-select: all;
+    }
+    .code-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+
+    /* Repo list */
+    .repo-list {
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .repo-list::-webkit-scrollbar { width: 4px; }
+    .repo-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .repo-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s ease;
+    }
+    .repo-item:last-child { border-bottom: none; }
+    .repo-item:hover { background: var(--surface-2); }
+    .repo-item.selected { background: var(--info-bg); border-left: 2px solid var(--accent); }
+    .repo-item-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .repo-item-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Mode cards */
+    .mode-cards { display: flex; gap: 10px; margin-bottom: 20px; }
+    .mode-card {
+      flex: 1;
+      padding: 18px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .mode-card:hover { border-color: var(--border-light); background: var(--surface-2); }
+    .mode-card.selected { border-color: var(--accent); background: var(--info-bg); }
+    .mode-card-icon { font-size: 24px; margin-bottom: 6px; }
+    .mode-card-title { font-size: 13px; font-weight: 700; }
+    .mode-card-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* IDE selector */
+    .ide-cards { display: flex; gap: 10px; margin: 16px 0; }
+    .ide-card {
+      flex: 1;
+      padding: 20px 14px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .ide-card:hover { border-color: var(--border-light); }
+    .ide-card.selected { border-color: var(--accent); background: var(--info-bg); }
+    .ide-card-icon { font-size: 28px; margin-bottom: 8px; }
+    .ide-card-name { font-size: 14px; font-weight: 700; }
+    .ide-card-desc { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Init steps */
+    .init-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .init-item.active { color: var(--text); }
+    .init-item.done { color: var(--success); }
+    .init-dot { width: 18px; text-align: center; font-size: 12px; }
+
+    /* Log box */
+    .log-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      max-height: 100px;
+      overflow-y: auto;
+      margin: 12px 0;
+    }
+    .log-box::-webkit-scrollbar { width: 4px; }
+    .log-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Complete info */
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .info-card p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .info-card strong { color: var(--text); font-size: 13px; }
+
+    /* Install actions */
+    #install-actions { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="logo">JustVibeIt</div>
+      <div class="logo-sub">프로젝트 설치 도우미</div>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-step active" data-step="0">1</div>
+      <div class="progress-line" data-line="0"></div>
+      <div class="progress-step" data-step="1">2</div>
+      <div class="progress-line" data-line="1"></div>
+      <div class="progress-step" data-step="2">3</div>
+      <div class="progress-line" data-line="2"></div>
+      <div class="progress-step" data-step="3">4</div>
+      <div class="progress-line" data-line="3"></div>
+      <div class="progress-step" data-step="4">5</div>
+    </div>
+
+    <div class="content">
+
+      <!-- Step 0: 환경 체크 -->
+      <div class="step active" id="step-0">
+        <div class="step-label">Step 1</div>
+        <div class="step-title">환경 확인</div>
+        <div class="step-desc">필요한 도구들이 설치되어 있는지 확인합니다.</div>
+        <div id="check-brew" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">Homebrew 확인 중...</span></div>
+        <div id="check-git" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">Git 확인 중...</span></div>
+        <div id="check-node" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">Node.js 확인 중...</span></div>
+        <div id="check-gh" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">GitHub CLI 확인 중...</span></div>
+        <div id="install-actions"></div>
+        <div class="btn-group">
+          <button class="btn btn-ghost" onclick="runChecks()">다시 확인</button>
+          <button class="btn btn-primary" id="btn-next-0" disabled onclick="goStep(1)">다음</button>
+        </div>
+      </div>
+
+      <!-- Step 1: GitHub 로그인 -->
+      <div class="step" id="step-1">
+        <div class="step-label">Step 2</div>
+        <div class="step-title">GitHub 로그인</div>
+        <div class="step-desc">GitHub 계정으로 로그인하면 프로젝트를 만들 수 있어요.</div>
+        <div id="auth-status" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">로그인 상태 확인 중...</span></div>
+        <div id="auth-actions"></div>
+        <div class="btn-group">
+          <button class="btn btn-ghost" onclick="goStep(0)">이전</button>
+          <button class="btn btn-primary" id="btn-next-1" disabled onclick="goStep(2)">다음</button>
+        </div>
+      </div>
+
+      <!-- Step 2: 프로젝트 선택 -->
+      <div class="step" id="step-2">
+        <div class="step-label">Step 3</div>
+        <div class="step-title">프로젝트 선택</div>
+        <div class="step-desc">새 프로젝트를 만들거나 기존 프로젝트를 이어받을 수 있어요.</div>
+        <div class="mode-cards">
+          <div class="mode-card" onclick="selectMode('new')">
+            <div class="mode-card-icon">+</div>
+            <div class="mode-card-title">새 프로젝트</div>
+            <div class="mode-card-desc">처음부터 시작</div>
+          </div>
+          <div class="mode-card" onclick="selectMode('existing')">
+            <div class="mode-card-icon">↓</div>
+            <div class="mode-card-title">기존 프로젝트</div>
+            <div class="mode-card-desc">다른 PC에서 이어받기</div>
+          </div>
+        </div>
+        <div id="mode-new" style="display:none;">
+          <div class="field">
+            <label class="field-label">프로젝트 이름</label>
+            <input type="text" class="field-input" id="repo-name" placeholder="my-cool-app" oninput="validateRepoName()">
+            <div class="field-hint">영문, 숫자, 하이픈(-)만 사용 가능</div>
+          </div>
+          <div id="fork-status"></div>
+        </div>
+        <div id="mode-existing" style="display:none;">
+          <div id="repo-list-loading" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">프로젝트 목록 불러오는 중...</span></div>
+          <div id="repo-list-container" style="display:none;">
+            <div class="field">
+              <label class="field-label">이어받을 프로젝트 선택</label>
+              <div id="repo-list" class="repo-list"></div>
+            </div>
+          </div>
+          <div id="existing-status"></div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-ghost" onclick="goStep(1)">이전</button>
+          <button class="btn btn-primary" id="btn-step2-action" disabled style="display:none;" onclick="doStep2Action()">진행하기</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Clone -->
+      <div class="step" id="step-3">
+        <div class="step-label">Step 4</div>
+        <div class="step-title">프로젝트 다운로드</div>
+        <div class="step-desc">프로젝트를 내 컴퓨터로 가져옵니다.</div>
+        <div class="field">
+          <label class="field-label">저장할 위치</label>
+          <div class="folder-row">
+            <input type="text" class="field-input" id="clone-path" readonly placeholder="폴더를 선택해주세요">
+            <button class="btn btn-ghost" onclick="selectFolder()">찾아보기</button>
+          </div>
+        </div>
+        <div id="clone-status"></div>
+        <div class="btn-group">
+          <button class="btn btn-ghost" onclick="goStep(2)">이전</button>
+          <button class="btn btn-primary" id="btn-clone" disabled onclick="doClone()">다운로드</button>
+        </div>
+      </div>
+
+      <!-- Step 4: 설정 + 완료 -->
+      <div class="step" id="step-4">
+        <div class="step-label" id="final-label">Step 5</div>
+        <div class="step-title" id="final-title">프로젝트 설정 중...</div>
+        <div class="step-desc" id="final-desc">패키지 설치를 진행하고 있어요.</div>
+
+        <div id="init-steps" style="margin-bottom:8px;">
+          <div class="init-item" id="is-1"><span class="init-dot">○</span> 기본 패키지 설치</div>
+          <div class="init-item" id="is-2"><span class="init-dot">○</span> Supabase 클라이언트</div>
+          <div class="init-item" id="is-3"><span class="init-dot">○</span> UI 라이브러리</div>
+          <div class="init-item" id="is-4"><span class="init-dot">○</span> 테스트 환경</div>
+        </div>
+
+        <div id="init-log-box" class="log-box" style="display:none;">
+          <div id="init-log-content"></div>
+        </div>
+
+        <div id="init-warn"></div>
+
+        <div id="complete-section" style="display:none;">
+          <div class="info-card">
+            <p>프로젝트 위치</p>
+            <strong id="final-path"></strong>
+          </div>
+
+          <div class="status-item info" style="margin-bottom:10px;">
+            <span class="status-icon">💡</span>
+            <span class="status-text">Supabase 설정이 필요해요! <code>.env</code> 파일에 URL과 Key를 넣어주세요.</span>
+          </div>
+
+          <div class="field">
+            <label class="field-label">IDE 선택</label>
+          </div>
+          <div class="ide-cards">
+            <div class="ide-card selected" onclick="selectIde('cursor')">
+              <div class="ide-card-icon">⌨️</div>
+              <div class="ide-card-name">Cursor</div>
+              <div class="ide-card-desc">AI 코딩 에디터</div>
+            </div>
+            <div class="ide-card" onclick="selectIde('antigravity')">
+              <div class="ide-card-icon">🚀</div>
+              <div class="ide-card-name">Antigravity</div>
+              <div class="ide-card-desc">AI 네이티브 IDE</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary btn-block" id="btn-open-ide" disabled onclick="openInIde()">설정 진행 중...</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 0;
+    let repoName = '';
+    let projectPath = '';
+    let projectMode = '';
+    let selectedExistingRepo = '';
+    let ghUsername = '';
+    let selectedIde = 'cursor';
+
+    function goStep(n) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(`step-${n}`).classList.add('active');
+      document.querySelectorAll('.progress-step').forEach((dot, i) => {
+        dot.classList.remove('active', 'done');
+        if (i < n) dot.classList.add('done');
+        if (i === n) dot.classList.add('active');
+      });
+      document.querySelectorAll('.progress-line').forEach((line, i) => {
+        line.classList.toggle('done', i < n);
+      });
+      currentStep = n;
+      if (n === 1) checkAuth();
+      if (n === 4) runInit();
+    }
+
+    let currentPlatform = 'darwin';
+
+    async function runChecks() {
+      currentPlatform = await window.api.getPlatform();
+      const isWin = currentPlatform === 'win32';
+
+      if (isWin) {
+        document.getElementById('check-brew').style.display = 'none';
+      } else {
+        document.getElementById('check-brew').style.display = '';
+      }
+
+      const checks = isWin
+        ? [
+            { id: 'check-git', fn: () => window.api.checkGit(), label: 'Git', installId: 'git' },
+            { id: 'check-node', fn: () => window.api.checkNode(), label: 'Node.js', installId: 'node' },
+            { id: 'check-gh', fn: () => window.api.checkGh(), label: 'GitHub CLI', installId: 'gh' },
+          ]
+        : [
+            { id: 'check-brew', fn: () => window.api.checkBrew(), label: 'Homebrew', installId: 'brew' },
+            { id: 'check-git', fn: () => window.api.checkGit(), label: 'Git', installId: 'git' },
+            { id: 'check-node', fn: () => window.api.checkNode(), label: 'Node.js', installId: 'node', needsBrew: true },
+            { id: 'check-gh', fn: () => window.api.checkGh(), label: 'GitHub CLI', installId: 'gh', needsBrew: true },
+          ];
+
+      let allGood = true;
+      const missing = [];
+      let brewOk = isWin;
+
+      for (const c of checks) {
+        const el = document.getElementById(c.id);
+        el.className = 'status-item';
+        el.innerHTML = `<span class="status-icon"><span class="spinner"></span></span><span class="status-text">${c.label} 확인 중...</span>`;
+        const r = await c.fn();
+        if (r.installed) {
+          el.className = 'status-item ok';
+          el.innerHTML = `<span class="status-icon">✓</span><span class="status-text"><strong>${c.label}</strong> ${r.version ? r.version : '설치됨'}</span>`;
+          if (c.installId === 'brew') brewOk = true;
+        } else {
+          allGood = false;
+          el.className = 'status-item fail';
+          el.innerHTML = `<span class="status-icon">✗</span><span class="status-text">${c.label} 설치 안 됨</span>`;
+          missing.push(c.installId);
+        }
+      }
+
+      const actionsEl = document.getElementById('install-actions');
+      if (missing.length > 0) {
+        let html = '';
+        if (missing.includes('brew')) html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('brew')">Homebrew 설치</button>`;
+        if (missing.includes('git')) html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('git')">Git 설치</button>`;
+        if (missing.includes('node')) html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('node')"${!brewOk ? ' disabled' : ''}>Node.js 설치</button>`;
+        if (missing.includes('gh')) html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('gh')"${!brewOk ? ' disabled' : ''}>GitHub CLI 설치</button>`;
+        actionsEl.innerHTML = html;
+      } else {
+        actionsEl.innerHTML = '';
+      }
+      document.getElementById('btn-next-0').disabled = !allGood;
+    }
+
+    async function doInstall(tool) {
+      if (tool === 'brew') { showBrewGuide(); return; }
+      const map = {
+        git: { el: 'check-git', fn: () => window.api.installGit(), label: 'Git' },
+        node: { el: 'check-node', fn: () => window.api.installNode(), label: 'Node.js' },
+        gh: { el: 'check-gh', fn: () => window.api.installGh(), label: 'GitHub CLI' },
+      };
+      const t = map[tool];
+      const el = document.getElementById(t.el);
+      el.className = 'status-item';
+      el.innerHTML = `<span class="status-icon"><span class="spinner"></span></span><span class="status-text">${t.label} 설치 중...</span>`;
+      const r = await t.fn();
+      if (r.success) {
+        if (r.message) {
+          el.className = 'status-item warn';
+          el.innerHTML = `<span class="status-icon">⏳</span><span class="status-text">${r.message}</span>`;
+        } else {
+          el.className = 'status-item ok';
+          el.innerHTML = `<span class="status-icon">✓</span><span class="status-text"><strong>${t.label}</strong> 설치 완료</span>`;
+          runChecks();
+        }
+      } else {
+        el.className = 'status-item fail';
+        el.innerHTML = `<span class="status-icon">✗</span><span class="status-text">설치 실패: ${r.message}</span>`;
+      }
+    }
+
+    function showBrewGuide() {
+      const actionsEl = document.getElementById('install-actions');
+      actionsEl.innerHTML = `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
+          <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text);">Homebrew 설치 방법</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.8;">
+            <div>① "설치 시작" 버튼 → 터미널이 열려요</div>
+            <div>② Mac 비밀번호 입력 <span style="color:var(--text-muted);">(화면에 안 보이는 게 정상)</span></div>
+            <div>③ Enter 후 5~10분 대기</div>
+            <div>④ "Installation successful!" 확인 후 "다시 확인" 클릭</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doBrewInstall()">설치 시작</button>
+        <button class="btn btn-ghost btn-sm btn-block" onclick="runChecks()">다시 확인</button>
+      `;
+    }
+
+    async function doBrewInstall() {
+      const el = document.getElementById('check-brew');
+      el.className = 'status-item';
+      el.innerHTML = '<span class="status-icon"><span class="spinner"></span></span><span class="status-text">터미널을 여는 중...</span>';
+      const r = await window.api.installBrew();
+      if (r.success) {
+        el.className = 'status-item warn';
+        el.innerHTML = '<span class="status-icon">⏳</span><span class="status-text">터미널에서 설치 진행 중... 완료 후 "다시 확인"</span>';
+      } else {
+        el.className = 'status-item fail';
+        el.innerHTML = `<span class="status-icon">✗</span><span class="status-text">설치 실패: ${r.message}</span>`;
+      }
+    }
+
+    async function checkAuth() {
+      const el = document.getElementById('auth-status');
+      const actionsEl = document.getElementById('auth-actions');
+      el.className = 'status-item';
+      el.innerHTML = `<span class="status-icon"><span class="spinner"></span></span><span class="status-text">로그인 상태 확인 중...</span>`;
+      const r = await window.api.checkGhAuth();
+      if (r.loggedIn) {
+        el.className = 'status-item ok';
+        el.innerHTML = `<span class="status-icon">✓</span><span class="status-text"><strong>${r.username}</strong>으로 로그인됨</span>`;
+        actionsEl.innerHTML = '';
+        const u = await window.api.getGhUsername();
+        if (u.success) ghUsername = u.username;
+        document.getElementById('btn-next-1').disabled = false;
+      } else {
+        el.className = 'status-item fail';
+        el.innerHTML = `<span class="status-icon">✗</span><span class="status-text">GitHub에 로그인되어 있지 않아요</span>`;
+        actionsEl.innerHTML = `<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="doLogin()">GitHub 로그인</button>`;
+        document.getElementById('btn-next-1').disabled = true;
+      }
+    }
+
+    async function doLogin() {
+      const el = document.getElementById('auth-status');
+      const actionsEl = document.getElementById('auth-actions');
+      el.className = 'status-item';
+      el.innerHTML = `<span class="status-icon"><span class="spinner"></span></span><span class="status-text">브라우저를 여는 중...</span>`;
+      actionsEl.innerHTML = '';
+      const r = await window.api.ghLogin();
+      if (r.success && r.code) {
+        el.className = 'status-item info';
+        el.innerHTML = `<span class="status-icon">🌐</span><span class="status-text">브라우저에서 아래 코드를 입력하세요</span>`;
+        actionsEl.innerHTML = `
+          <div class="code-box">
+            <div class="code-value">${r.code}</div>
+            <div class="code-hint">브라우저에서 코드 입력 후 "Authorize" 클릭</div>
+          </div>
+          <button class="btn btn-ghost btn-block" disabled>
+            <span class="spinner"></span> 로그인 대기 중...
+          </button>
+        `;
+        const waitResult = await window.api.ghLoginWait();
+        if (waitResult.done) {
+          const authCheck = await window.api.checkGhAuth();
+          if (authCheck.loggedIn) {
+            el.className = 'status-item ok';
+            el.innerHTML = `<span class="status-icon">✓</span><span class="status-text"><strong>${authCheck.username}</strong>으로 로그인 완료</span>`;
+            actionsEl.innerHTML = '';
+            const u = await window.api.getGhUsername();
+            if (u.success) ghUsername = u.username;
+            document.getElementById('btn-next-1').disabled = false;
+          } else {
+            el.className = 'status-item fail';
+            el.innerHTML = `<span class="status-icon">✗</span><span class="status-text">로그인이 완료되지 않았어요</span>`;
+            actionsEl.innerHTML = `<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="doLogin()">다시 시도</button>`;
+          }
+        }
+      } else if (r.success && !r.code) {
+        el.className = 'status-item ok';
+        el.innerHTML = `<span class="status-icon">✓</span><span class="status-text">로그인 완료!</span>`;
+        actionsEl.innerHTML = '';
+        const u = await window.api.getGhUsername();
+        if (u.success) ghUsername = u.username;
+        document.getElementById('btn-next-1').disabled = false;
+      } else {
+        el.className = 'status-item fail';
+        el.innerHTML = `<span class="status-icon">✗</span><span class="status-text">${r.message}</span>`;
+        actionsEl.innerHTML = `<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="doLogin()">다시 시도</button>`;
+      }
+    }
+
+    function selectMode(mode) {
+      projectMode = mode;
+      document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+      const actionBtn = document.getElementById('btn-step2-action');
+      if (mode === 'new') {
+        document.getElementById('mode-new').style.display = 'block';
+        document.getElementById('mode-existing').style.display = 'none';
+        actionBtn.style.display = '';
+        actionBtn.textContent = '프로젝트 만들기';
+        actionBtn.onclick = doCreateProject;
+        validateRepoName();
+      } else {
+        document.getElementById('mode-new').style.display = 'none';
+        document.getElementById('mode-existing').style.display = 'block';
+        actionBtn.style.display = '';
+        actionBtn.textContent = '이어받기';
+        actionBtn.onclick = () => { repoName = selectedExistingRepo; goStep(3); };
+        actionBtn.disabled = true;
+        loadMyRepos();
+      }
+    }
+
+    function validateRepoName() {
+      const name = document.getElementById('repo-name').value.trim();
+      const valid = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(name) && name.length >= 2;
+      document.getElementById('btn-step2-action').disabled = !valid;
+      repoName = name;
+    }
+
+    async function loadMyRepos() {
+      const loadingEl = document.getElementById('repo-list-loading');
+      const containerEl = document.getElementById('repo-list-container');
+      const listEl = document.getElementById('repo-list');
+      loadingEl.style.display = 'flex';
+      containerEl.style.display = 'none';
+      const r = await window.api.listMyRepos();
+      loadingEl.style.display = 'none';
+      if (r.success && r.repos.length > 0) {
+        listEl.innerHTML = r.repos.map(repo => {
+          const date = repo.updatedAt ? new Date(repo.updatedAt).toLocaleDateString('ko-KR') : '';
+          return `<div class="repo-item" onclick="selectRepo(this, '${repo.name}')"><div class="repo-item-name">${repo.name}</div>${repo.description ? `<div class="repo-item-desc">${repo.description}</div>` : ''}${date ? `<div class="repo-item-desc">최근 수정: ${date}</div>` : ''}</div>`;
+        }).join('');
+        containerEl.style.display = 'block';
+      } else if (r.success) {
+        listEl.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:13px;">이어받을 프로젝트가 없어요.</div>';
+        containerEl.style.display = 'block';
+      } else {
+        const statusEl = document.getElementById('existing-status');
+        statusEl.className = 'status-item fail';
+        statusEl.innerHTML = `<span class="status-icon">✗</span><span class="status-text">${r.message}</span>`;
+      }
+    }
+
+    function selectRepo(el, name) {
+      document.querySelectorAll('.repo-item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedExistingRepo = name;
+      document.getElementById('btn-step2-action').disabled = false;
+    }
+
+    async function doCreateProject() {
+      const btn = document.getElementById('btn-step2-action');
+      const statusEl = document.getElementById('fork-status');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner spinner-white"></span> 만드는 중...';
+      statusEl.innerHTML = '';
+      const r = await window.api.createFromTemplate(repoName);
+      if (r.success) {
+        if (r.owner) ghUsername = r.owner;
+        statusEl.className = 'status-item ok';
+        statusEl.innerHTML = `<span class="status-icon">✓</span><span class="status-text">프로젝트가 만들어졌어요!</span>`;
+        btn.textContent = '다음';
+        btn.onclick = () => goStep(3);
+        btn.disabled = false;
+        btn.className = 'btn btn-success';
+      } else {
+        statusEl.className = 'status-item fail';
+        statusEl.innerHTML = `<span class="status-icon">✗</span><span class="status-text">${r.message}</span>`;
+        btn.textContent = '다시 시도';
+        btn.onclick = doCreateProject;
+        btn.disabled = false;
+        btn.className = 'btn btn-primary';
+      }
+    }
+
+    async function selectFolder() {
+      const r = await window.api.selectFolder();
+      if (!r.canceled) {
+        document.getElementById('clone-path').value = r.path;
+        document.getElementById('btn-clone').disabled = false;
+      }
+    }
+
+    async function doClone() {
+      const btn = document.getElementById('btn-clone');
+      const statusEl = document.getElementById('clone-status');
+      const targetDir = document.getElementById('clone-path').value;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner spinner-white"></span> 다운로드 중...';
+      statusEl.innerHTML = '';
+      const owner = ghUsername || '';
+      const r = projectMode === 'existing'
+        ? await window.api.cloneExisting(repoName, targetDir, owner)
+        : await window.api.cloneRepo(repoName, targetDir, owner);
+      if (r.success) {
+        projectPath = r.path;
+        statusEl.className = 'status-item ok';
+        statusEl.innerHTML = `<span class="status-icon">✓</span><span class="status-text">다운로드 완료!</span>`;
+        document.getElementById('final-path').textContent = projectPath;
+        btn.textContent = '다음';
+        btn.onclick = () => goStep(4);
+        btn.disabled = false;
+        btn.className = 'btn btn-success';
+      } else {
+        statusEl.className = 'status-item fail';
+        statusEl.innerHTML = `<span class="status-icon">✗</span><span class="status-text">${r.message}</span>`;
+        btn.textContent = '다시 시도';
+        btn.disabled = false;
+        btn.className = 'btn btn-primary';
+      }
+    }
+
+    function selectIde(ide) {
+      selectedIde = ide;
+      document.querySelectorAll('.ide-card').forEach(c => c.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+      const btn = document.getElementById('btn-open-ide');
+      const label = ide === 'cursor' ? 'Cursor' : 'Antigravity';
+      btn.textContent = `${label}에서 열기`;
+    }
+
+    let lastInitStep = 0;
+
+    function updateInitStep(stepNum, status) {
+      if (stepNum < 1 || stepNum > 4) return;
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById('is-' + i);
+        if (!el) continue;
+        if (i < stepNum) {
+          el.className = 'init-item done';
+          el.querySelector('.init-dot').textContent = '✓';
+        } else if (i === stepNum) {
+          if (status === 'done' || stepNum < lastInitStep) {
+            el.className = 'init-item done';
+            el.querySelector('.init-dot').textContent = '✓';
+          } else {
+            el.className = 'init-item active';
+            el.querySelector('.init-dot').innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;"></span>';
+          }
+        }
+      }
+      if (stepNum > lastInitStep) lastInitStep = stepNum;
+      if (stepNum === 5) {
+        for (let i = 1; i <= 4; i++) {
+          const el = document.getElementById('is-' + i);
+          if (el) { el.className = 'init-item done'; el.querySelector('.init-dot').textContent = '✓'; }
+        }
+      }
+    }
+
+    let initRunning = false;
+
+    async function runInit() {
+      if (initRunning) return;
+      initRunning = true;
+      lastInitStep = 0;
+
+      const logBox = document.getElementById('init-log-box');
+      const logContent = document.getElementById('init-log-content');
+      logBox.style.display = 'block';
+      logContent.innerHTML = '';
+
+      document.getElementById('complete-section').style.display = 'none';
+      const ideBtn = document.getElementById('btn-open-ide');
+      ideBtn.disabled = true;
+      ideBtn.textContent = '설정 진행 중...';
+
+      document.getElementById('final-path').textContent = projectPath;
+
+      window.api.onInitLog((data) => {
+        if (data.step) updateInitStep(data.step, data.status);
+        if (data.log) {
+          const line = document.createElement('div');
+          line.textContent = data.log;
+          if (data.log.includes('✅') || data.log.includes('✓')) line.style.color = 'var(--success)';
+          else if (data.log.includes('❌') || data.log.includes('⚠️')) line.style.color = 'var(--warning)';
+          logContent.appendChild(line);
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+        if (data.status === 'warn') {
+          const warnEl = document.getElementById('init-warn');
+          warnEl.className = 'status-item warn';
+          warnEl.innerHTML = `<span class="status-icon">⚠️</span><span class="status-text">${data.text}</span>`;
+        }
+      });
+
+      updateInitStep(1, 'running');
+      const r = await window.api.initProject(projectPath, repoName);
+      initRunning = false;
+
+      if (r.success) {
+        document.getElementById('final-label').textContent = 'COMPLETE';
+        document.getElementById('final-title').textContent = '설치 완료!';
+        document.getElementById('final-desc').textContent = '프로젝트가 준비됐어요. IDE에서 열어서 시작하세요.';
+      } else {
+        document.getElementById('final-title').textContent = '설정 중 문제가 발생했어요';
+        document.getElementById('final-desc').textContent = r.message || '다시 시도해주세요.';
+      }
+
+      document.getElementById('complete-section').style.display = 'block';
+      ideBtn.disabled = false;
+      const label = selectedIde === 'cursor' ? 'Cursor' : 'Antigravity';
+      ideBtn.textContent = `${label}에서 열기`;
+    }
+
+    async function openInIde() {
+      const r = await window.api.openInIde(projectPath, selectedIde);
+      if (r.message) alert(r.message);
+    }
+
+    runChecks();
+  </script>
+</body>
+</html>

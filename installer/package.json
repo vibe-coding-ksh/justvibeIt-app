@@ -1,0 +1,52 @@
+{
+  "name": "justvibeit-installer",
+  "version": "1.0.0",
+  "description": "JustVibeIt 프로젝트 설치 도우미",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build:mac": "bash scripts/build-mac.sh",
+    "build:win": "electron-builder --win --config",
+    "build:all": "bash scripts/build-mac.sh && electron-builder --win --config"
+  },
+  "build": {
+    "appId": "com.justvibeit.installer",
+    "productName": "JustVibeIt Installer",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "src/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "installerLanguages": ["ko-KR", "en-US"],
+      "shortcutName": "JustVibeIt 설치도우미"
+    },
+    "portable": {
+      "artifactName": "JustVibeIt-Installer-${version}-portable.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^32.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}
