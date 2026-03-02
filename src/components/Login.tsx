@@ -1,44 +1,22 @@
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 
-export default function Login() {
+interface LoginProps {
+  onLogin: () => void;
+}
+
+export default function Login({ onLogin }: LoginProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleGoogleLogin = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + (import.meta.env.VITE_BASE_PATH || '/'),
-        },
-      });
-
-      if (error) {
-        setError('로그인에 실패했어요. 다시 시도해주세요.');
-        console.error('Google 로그인 오류:', error);
-      }
-    } catch {
-      setError('로그인 중 문제가 발생했어요.');
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogleLogin = () => {
+    setLoading(true);
+    onLogin();
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
       <div className="bg-white rounded-2xl p-8 shadow-xl text-center max-w-sm w-full mx-4">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">JustVibeIt</h1>
-        <p className="text-gray-500 mb-8">AI와 함께 나만의 사이트를 만들어보세요</p>
-
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
+        <p className="text-gray-500 mb-8">Build your own website by talking to AI</p>
 
         <button
           onClick={handleGoogleLogin}
@@ -64,12 +42,12 @@ export default function Login() {
             />
           </svg>
           <span className="text-sm font-medium text-gray-700">
-            {loading ? '로그인 중...' : 'Google로 로그인'}
+            {loading ? 'Signing in...' : 'Sign in with Google'}
           </span>
         </button>
 
         <p className="text-xs text-gray-400 mt-6">
-          로그인하면 포트폴리오를 관리할 수 있어요
+          Sign in to manage your portfolio
         </p>
       </div>
     </div>

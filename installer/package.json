@@ -6,9 +6,9 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "build:mac": "bash scripts/build-mac.sh",
+    "build:mac": "electron-builder --mac --config",
     "build:win": "electron-builder --win --config",
-    "build:all": "bash scripts/build-mac.sh && electron-builder --win --config"
+    "build:all": "electron-builder --mac --win --config"
   },
   "build": {
     "appId": "com.justvibeit.installer",
@@ -21,6 +21,23 @@
       "preload.js",
       "src/**/*"
     ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "artifactName": "JustVibeIt-Installer-${version}-mac.${ext}"
+    },
+    "dmg": {
+      "title": "JustVibeIt Installer",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
     "win": {
       "target": [
         {
@@ -31,15 +48,15 @@
           "target": "portable",
           "arch": ["x64"]
         }
-      ],
-      "icon": "src/icon.ico"
+      ]
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
       "allowToChangeInstallationDirectory": false,
       "installerLanguages": ["ko-KR", "en-US"],
-      "shortcutName": "JustVibeIt 설치도우미"
+      "shortcutName": "JustVibeIt Installer",
+      "artifactName": "JustVibeIt-Installer-${version}-setup.${ext}"
     },
     "portable": {
       "artifactName": "JustVibeIt-Installer-${version}-portable.exe"

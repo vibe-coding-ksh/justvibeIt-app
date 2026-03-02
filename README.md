@@ -1,193 +1,200 @@
 # JustVibeIt
 
-**코딩을 몰라도 AI와 대화하면서 나만의 웹사이트를 만들 수 있어요!**
+> **Build your own website by talking to AI. No coding required.**
 
-Supabase(무료)를 사용해서 데이터베이스, 이미지 저장, 로그인까지 모두 지원합니다.
+[한국어](README.ko.md) | English
 
----
+[![Stars](https://img.shields.io/github/stars/vibe-coding-ksh/justvibeIt-app?style=social)](https://github.com/vibe-coding-ksh/justvibeIt-app)
+[![Forks](https://img.shields.io/github/forks/vibe-coding-ksh/justvibeIt-app?style=social)](https://github.com/vibe-coding-ksh/justvibeIt-app/fork)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 이런 분들을 위해 만들었어요
-
-- 코딩은 모르지만 나만의 웹사이트를 갖고 싶은 분
-- AI와 대화하면서 사이트를 만들고 싶은 분
-- 무료로 DB + 이미지 저장 + 로그인까지 쓰고 싶은 분
+JustVibeIt is a **vibe coding starter kit** for non-developers. Fork this repo, open it in an AI-powered IDE like [Cursor](https://cursor.sh) or [Antigravity](https://antigravity.ai), and start building your website just by talking to AI.
 
 ---
 
-## 시작하기
+## Who is this for?
 
-### 인스톨러로 시작 (권장)
+- People who want their own website but don't know how to code
+- Anyone who wants to build a site by chatting with AI
+- Developers who want a quick React + Appwrite boilerplate
 
-**JustVibeIt Installer**를 다운로드하면 클릭 몇 번으로 모든 설정이 완료됩니다.
+---
 
-1. [Releases](https://github.com/your-org/justvibeIt-app/releases)에서 인스톨러 다운로드
-2. 인스톨러 실행 → 환경 체크 → GitHub 로그인 → 프로젝트 생성
-3. 설치 완료 후 **Cursor** 또는 **Antigravity**에서 바로 열기
+## Quick Start
 
-> 인스톨러가 Git, Node.js, GitHub CLI 설치부터 프로젝트 생성까지 모두 안내해줍니다.
+### Option A: Use the Installer (Recommended)
 
-### Supabase 설정
+Download the **JustVibeIt Installer** from [Releases](https://github.com/vibe-coding-ksh/justvibeIt-app/releases).
 
-1. [supabase.com](https://supabase.com)에서 무료 계정 만들기
-2. 새 프로젝트 생성
-3. Settings → API에서 **Project URL**과 **anon public key** 복사
-4. `.env` 파일에 붙여넣기:
+| Platform | File |
+|----------|------|
+| macOS | `JustVibeIt-Installer-x.x.x-mac.dmg` |
+| Windows | `JustVibeIt-Installer-x.x.x-setup.exe` or `...-portable.exe` |
 
-```
-VITE_SUPABASE_URL=https://xxxxxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJxxxxxxxxxxxxxxxx
-```
+The installer will:
+1. Check and install required tools (Git, Node.js, GitHub CLI)
+   - **macOS**: auto-installs via Homebrew
+   - **Windows**: auto-installs via winget (Windows 10/11 built-in)
+2. Log you into GitHub
+3. Fork this repo to your account (and star it!)
+4. Clone it to your computer
+5. Install all dependencies
+6. Open it in your preferred IDE
 
-### DB 테이블 만들기
-
-Supabase 대시보드 → SQL Editor에서 아래 SQL을 실행하세요:
-
-```sql
--- 사이트 설정
-CREATE TABLE site_config (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  site_name text NOT NULL DEFAULT '내 프로젝트',
-  description text DEFAULT '',
-  theme text DEFAULT 'light',
-  created_at timestamptz DEFAULT now()
-);
-
--- 프로필
-CREATE TABLE profiles (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id),
-  name text NOT NULL,
-  title text DEFAULT '',
-  bio text DEFAULT '',
-  avatar text DEFAULT '',
-  links jsonb DEFAULT '[]',
-  created_at timestamptz DEFAULT now()
-);
-
--- 프로젝트
-CREATE TABLE projects (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id),
-  title text NOT NULL,
-  description text DEFAULT '',
-  image text DEFAULT '',
-  tags text[] DEFAULT '{}',
-  link text DEFAULT '',
-  sort_order int DEFAULT 0,
-  created_at timestamptz DEFAULT now()
-);
-
--- RLS (Row Level Security) 활성화
-ALTER TABLE site_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-
--- 누구나 읽기 가능
-CREATE POLICY "누구나 site_config 읽기" ON site_config FOR SELECT USING (true);
-CREATE POLICY "누구나 profiles 읽기" ON profiles FOR SELECT USING (true);
-CREATE POLICY "누구나 projects 읽기" ON projects FOR SELECT USING (true);
-
--- 로그인한 사용자만 쓰기/수정/삭제
-CREATE POLICY "본인 site_config 관리" ON site_config FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "본인 profiles 관리" ON profiles FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "본인 projects 관리" ON projects FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
--- 샘플 데이터 넣기
-INSERT INTO site_config (site_name, description, theme)
-VALUES ('내 프로젝트', 'JustVibeIt으로 만든 포트폴리오', 'light');
-
-INSERT INTO profiles (name, title, bio, avatar, links)
-VALUES (
-  '홍길동',
-  '기획자 / 디자이너',
-  '안녕하세요! AI와 함께 아이디어를 현실로 만들어가고 있어요.',
-  '',
-  '[{"label": "GitHub", "url": "https://github.com"}, {"label": "LinkedIn", "url": "https://linkedin.com"}]'
-);
-
-INSERT INTO projects (title, description, image, tags, link, sort_order)
-VALUES
-  ('AI 챗봇 서비스', '고객 문의를 자동으로 처리하는 AI 챗봇', '', ARRAY['기획', 'AI', 'UX'], 'https://example.com', 1),
-  ('모바일 앱 리디자인', '기존 앱의 사용성을 개선하는 리디자인 프로젝트', '', ARRAY['디자인', '모바일'], 'https://example.com', 2);
-```
-
-### Storage 설정
-
-1. Supabase 대시보드 → Storage
-2. "New bucket" 클릭
-3. 이름: `images`, **Public bucket** 체크
-4. 생성 완료!
-
-### Google 로그인 설정 (선택)
-
-1. [Google Cloud Console](https://console.cloud.google.com)에서 OAuth 2.0 클라이언트 생성
-2. Supabase 대시보드 → Authentication → Providers → Google 활성화
-3. Client ID와 Secret 입력
-4. Redirect URL을 Google Console에 추가
-
-### 개발 시작!
+### Option B: Manual Setup
 
 ```bash
+# 1. Fork this repo on GitHub, then clone your fork
+git clone https://github.com/YOUR_USERNAME/justvibeIt-app.git
+cd justvibeIt-app
+
+# 2. Initialize the project
+npm run init
+
+# 3. Configure environment variables
+cp .env.example .env
+# Edit .env with your Appwrite credentials
+
+# 4. Start developing
 npm run dev
 ```
 
-http://localhost:5157 에서 확인하세요!
+Open http://localhost:5157 in your browser.
 
 ---
 
-## 지원 IDE
+## Appwrite Setup
 
-| IDE | 설명 |
-|-----|------|
-| [Cursor](https://cursor.sh) | AI 코딩 에디터 (추천) |
-| [Antigravity](https://antigravity.ai) | AI 네이티브 IDE |
+This project uses [Appwrite](https://appwrite.io) as the backend (auth, database, storage).
 
-인스톨러 완료 후 원하는 IDE를 선택해서 바로 프로젝트를 열 수 있습니다.
+### 1. Create an Appwrite Project
+
+- Go to [cloud.appwrite.io](https://cloud.appwrite.io) (free tier available)
+- Create a new project
+- Copy the **Project ID** and **Endpoint**
+
+### 2. Configure Environment Variables
+
+Edit your `.env` file:
+
+```
+VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
+VITE_APPWRITE_PROJECT_ID=your-project-id
+```
+
+### 3. Set Up Google OAuth (Optional)
+
+1. Create OAuth 2.0 credentials in [Google Cloud Console](https://console.cloud.google.com)
+2. In Appwrite Console → Auth → Settings → OAuth2 Providers → Enable Google
+3. Enter your Client ID and Secret
+
+### 4. Create Database Collections
+
+In Appwrite Console → Databases, create a database (ID: `main`) with these collections:
+
+**site_config** - Site settings
+| Attribute | Type | Required |
+|-----------|------|----------|
+| site_name | string | yes |
+| description | string | no |
+| theme | string | no |
+
+**profiles** - User profiles
+| Attribute | Type | Required |
+|-----------|------|----------|
+| user_id | string | no |
+| name | string | yes |
+| title | string | no |
+| bio | string | no |
+| avatar | string | no |
+| links | string | no |
+
+**projects** - Portfolio projects
+| Attribute | Type | Required |
+|-----------|------|----------|
+| user_id | string | no |
+| title | string | yes |
+| description | string | no |
+| image | string | no |
+| tags | string[] | no |
+| link | string | no |
+| sort_order | integer | no |
+
+### 5. Create Storage Bucket
+
+In Appwrite Console → Storage, create a bucket named `images` with public read access.
 
 ---
 
-## 배포하기
+## Talk to AI
+
+Open this project in Cursor or Antigravity and try saying:
+
+- "Change my name to John Doe"
+- "Add a new project"
+- "Make the background blue"
+- "Add a blog section"
+- "Deploy this"
+
+The AI will modify the code, update data, and even deploy for you!
+
+---
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start local development server |
+| `npm run init` | Initialize project (first time setup) |
+| `npm run build` | Build for production |
+| `npm run deploy` | Deploy to GitHub Pages |
+| `npm run test` | Run tests |
+
+---
+
+## Tech Stack
+
+- **React 18** + TypeScript + Vite
+- **Tailwind CSS** + shadcn/ui + MUI
+- **Appwrite** (Auth + Database + Storage)
+- **GitHub Pages** for deployment
+
+---
+
+## Supported IDEs
+
+| IDE | Description |
+|-----|-------------|
+| [Cursor](https://cursor.sh) | AI-powered code editor (recommended) |
+| [Antigravity](https://antigravity.ai) | AI-native IDE |
+
+---
+
+## Deploy
 
 ```bash
 npm run deploy
 ```
 
-배포 전에 `.env` 파일에서 `VITE_BASE_PATH`를 설정하세요:
+Set `VITE_BASE_PATH` in your `.env` before deploying:
 ```
-VITE_BASE_PATH=/조직이름/레포이름/
+VITE_BASE_PATH=/your-repo-name/
 ```
 
 ---
 
-## 명령어 모음
+## Contributing
 
-| 명령어 | 설명 |
-|--------|------|
-| `npm run dev` | 로컬에서 개발 시작 |
-| `npm run init` | 처음 시작할 때 패키지 설치 |
-| `npm run deploy` | 웹사이트 배포 |
-| `npm run build` | 빌드만 하기 |
-| `npm run test` | 테스트 실행 |
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 기술 스택
+## Security
 
-- **React 18** + TypeScript + Vite
-- **Tailwind CSS** + shadcn/ui + MUI
-- **Supabase** (Auth + Database + Storage)
-- **GitHub Pages** 배포
+See [SECURITY.md](SECURITY.md) for our security policy.
 
 ---
 
-## AI와 대화하면서 만들기
+## License
 
-Cursor 또는 Antigravity에서 AI에게 이렇게 말해보세요:
-
-- "내 이름을 '김철수'로 바꿔줘"
-- "프로젝트를 하나 더 추가해줘"
-- "배경색을 파란색으로 바꿔줘"
-- "블로그 섹션을 추가해줘"
-- "배포해줘"
-
-AI가 코드를 수정하고, 데이터를 업데이트하고, 배포까지 해줄 거예요!
+[MIT](LICENSE) - feel free to use this for anything!

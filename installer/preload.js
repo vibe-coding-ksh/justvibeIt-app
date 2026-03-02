@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   getPlatform: () => ipcRenderer.invoke('get-platform'),
   checkBrew: () => ipcRenderer.invoke('check-brew'),
+  checkWinget: () => ipcRenderer.invoke('check-winget'),
   checkGit: () => ipcRenderer.invoke('check-git'),
   checkNode: () => ipcRenderer.invoke('check-node'),
   checkGh: () => ipcRenderer.invoke('check-gh'),
@@ -14,7 +15,7 @@ contextBridge.exposeInMainWorld('api', {
   ghLogin: () => ipcRenderer.invoke('gh-login'),
   ghLoginWait: () => ipcRenderer.invoke('gh-login-wait'),
   getGhUsername: () => ipcRenderer.invoke('get-gh-username'),
-  createFromTemplate: (repoName) => ipcRenderer.invoke('create-from-template', repoName),
+  forkAndStar: (repoName) => ipcRenderer.invoke('fork-and-star', repoName),
   listMyRepos: () => ipcRenderer.invoke('list-my-repos'),
   cloneRepo: (repoName, targetDir, owner) => ipcRenderer.invoke('clone-repo', { repoName, targetDir, owner }),
   cloneExisting: (repoName, targetDir, owner) => ipcRenderer.invoke('clone-existing', { repoName, targetDir, owner }),

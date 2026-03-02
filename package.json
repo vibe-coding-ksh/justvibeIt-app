@@ -1,7 +1,8 @@
 {
-  "name": "justvibeit-cursor",
+  "name": "justvibeit",
   "version": "1.0.0",
   "type": "module",
+  "description": "Build your own website by talking to AI. No coding required.",
   "scripts": {
     "dev": "VITE_BASE_PATH=/ vite",
     "build": "tsc && vite build",
@@ -25,7 +26,7 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@supabase/supabase-js": "^2.97.0",
+    "appwrite": "^16.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",
@@ -48,5 +49,6 @@
     "typescript": "^5.7.3",
     "vite": "^6.0.11",
     "vitest": "^3.0.4"
-  }
+  },
+  "license": "MIT"
 }

@@ -4,7 +4,7 @@ const { exec, spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 
-const TEMPLATE_REPO = 'your-org/justvibeIt-app';
+const UPSTREAM_REPO = 'vibe-coding-ksh/justvibeIt-app';
 const IS_MAC = process.platform === 'darwin';
 const IS_WIN = process.platform === 'win32';
 
@@ -12,19 +12,27 @@ let mainWindow;
 let loginProcess = null;
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  const winOptions = {
     width: 480,
     height: 680,
     resizable: false,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 16 },
     backgroundColor: '#0a0a0a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
-  });
+  };
+
+  if (IS_MAC) {
+    winOptions.titleBarStyle = 'hiddenInset';
+    winOptions.trafficLightPosition = { x: 16, y: 16 };
+  } else {
+    winOptions.frame = true;
+    winOptions.autoHideMenuBar = true;
+  }
+
+  mainWindow = new BrowserWindow(winOptions);
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
 }
 
@@ -52,7 +60,7 @@ function runCommand(command, options = {}) {
   });
 }
 
-// === Step 0: 환경 체크 ===
+// === Step 0: Environment Checks ===
 
 ipcMain.handle('get-platform', () => process.platform);
 
@@ -85,13 +93,23 @@ ipcMain.handle('check-gh', async () => {
   } catch { return { installed: false }; }
 });
 
-// === Step 0: 설치 ===
+// === Step 0: Check winget (Windows) ===
+
+ipcMain.handle('check-winget', async () => {
+  if (IS_MAC) return { installed: true, skip: true };
+  try {
+    await runCommand('winget --version');
+    return { installed: true };
+  } catch { return { installed: false }; }
+});
+
+// === Step 0: Install Tools ===
 
 ipcMain.handle('install-brew', async () => {
   if (IS_WIN) return { success: true, skip: true };
   try {
     await runCommand(`osascript -e 'tell app "Terminal" to activate' -e 'tell app "Terminal" to do script "/bin/bash -c \\"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\\""'`);
-    return { success: true, message: '터미널에서 Homebrew 설치가 시작됐어요. 비밀번호를 입력하고 설치가 끝나면 "다시 확인"을 눌러주세요.' };
+    return { success: true, message: 'Homebrew installation started in Terminal. Enter your password and click "Re-check" when done.' };
   } catch (err) {
     return { success: false, message: err.stderr || err.error };
   }
@@ -99,12 +117,17 @@ ipcMain.handle('install-brew', async () => {
 
 ipcMain.handle('install-git', async () => {
   if (IS_WIN) {
-    shell.openExternal('https://git-scm.com/download/win');
-    return { success: true, message: '다운로드 페이지가 열렸어요! 설치 후 "다시 확인"을 눌러주세요.' };
+    try {
+      await runCommand('winget install --id Git.Git --accept-source-agreements --accept-package-agreements --silent', { timeout: 300000 });
+      return { success: true, message: 'Git 설치 완료! "다시 확인"을 눌러주세요.' };
+    } catch {
+      shell.openExternal('https://git-scm.com/download/win');
+      return { success: true, message: '자동 설치에 실패했어요. 다운로드 페이지에서 직접 설치 후 "다시 확인"을 눌러주세요.' };
+    }
   }
   try {
     await runCommand('xcode-select --install 2>&1 || true');
-    return { success: true, message: '설치 창이 떴어요! "설치" 버튼을 누르고 완료되면 "다시 확인"을 눌러주세요.' };
+    return { success: true, message: 'Install dialog opened! Click "Install" and then "Re-check".' };
   } catch (err) {
     return { success: false, message: err.stderr || err.error };
   }
@@ -112,8 +135,13 @@ ipcMain.handle('install-git', async () => {
 
 ipcMain.handle('install-node', async () => {
   if (IS_WIN) {
-    shell.openExternal('https://nodejs.org/ko/download/');
-    return { success: true, message: '다운로드 페이지가 열렸어요! LTS 버전을 설치 후 "다시 확인"을 눌러주세요.' };
+    try {
+      await runCommand('winget install --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements --silent', { timeout: 300000 });
+      return { success: true, message: 'Node.js 설치 완료! "다시 확인"을 눌러주세요.' };
+    } catch {
+      shell.openExternal('https://nodejs.org/en/download/');
+      return { success: true, message: '자동 설치에 실패했어요. 다운로드 페이지에서 LTS 버전을 설치 후 "다시 확인"을 눌러주세요.' };
+    }
   }
   try {
     await runCommand('brew install node', { timeout: 300000 });
@@ -125,8 +153,13 @@ ipcMain.handle('install-node', async () => {
 
 ipcMain.handle('install-gh', async () => {
   if (IS_WIN) {
-    shell.openExternal('https://cli.github.com/');
-    return { success: true, message: '다운로드 페이지가 열렸어요! 설치 후 "다시 확인"을 눌러주세요.' };
+    try {
+      await runCommand('winget install --id GitHub.cli --accept-source-agreements --accept-package-agreements --silent', { timeout: 300000 });
+      return { success: true, message: 'GitHub CLI 설치 완료! "다시 확인"을 눌러주세요.' };
+    } catch {
+      shell.openExternal('https://cli.github.com/');
+      return { success: true, message: '자동 설치에 실패했어요. 다운로드 페이지에서 직접 설치 후 "다시 확인"을 눌러주세요.' };
+    }
   }
   try {
     await runCommand('brew install gh', { timeout: 300000 });
@@ -136,7 +169,7 @@ ipcMain.handle('install-gh', async () => {
   }
 });
 
-// === Step 1: GitHub 로그인 ===
+// === Step 1: GitHub Login ===
 
 ipcMain.handle('check-gh-auth', async () => {
   try {
@@ -158,7 +191,7 @@ ipcMain.handle('gh-login', async () => {
       '--hostname', 'github.com',
       '--web',
       '--git-protocol', 'https',
-      '--scopes', 'repo',
+      '--scopes', 'repo,delete_repo',
     ], {
       env: { ...process.env, PATH: ENV_PATH, GH_PROMPT_DISABLED: '1' },
     });
@@ -182,7 +215,7 @@ ipcMain.handle('gh-login', async () => {
         const m = output.match(/one-time code[:\s]*([A-Z0-9]{4}-[A-Z0-9]{4})/i);
         if (m) {
           codeFound = true;
-          resolve({ success: true, code: m[1], message: '브라우저에서 아래 코드를 입력해주세요.' });
+          resolve({ success: true, code: m[1], message: 'Enter the code below in your browser.' });
         }
       }
     };
@@ -194,8 +227,8 @@ ipcMain.handle('gh-login', async () => {
       loginProcess = null;
       if (!codeFound) {
         resolve(code === 0
-          ? { success: true, code: null, message: '로그인 완료!' }
-          : { success: false, message: `로그인 실패\n${output.trim()}` });
+          ? { success: true, code: null, message: 'Login complete!' }
+          : { success: false, message: `Login failed\n${output.trim()}` });
       }
     });
 
@@ -206,7 +239,7 @@ ipcMain.handle('gh-login', async () => {
 
     setTimeout(() => {
       if (!codeFound) {
-        resolve({ success: false, message: '시간 초과. 다시 시도해주세요.' });
+        resolve({ success: false, message: 'Timeout. Please try again.' });
         if (loginProcess) { try { loginProcess.kill(); } catch {} loginProcess = null; }
       }
     }, 60000);
@@ -223,18 +256,37 @@ ipcMain.handle('gh-login-wait', async () => {
   });
 });
 
-// === Step 2: 프로젝트 생성 (Template) ===
+// === Step 2: Fork + Star ===
 
-ipcMain.handle('create-from-template', async (_, repoName) => {
+ipcMain.handle('fork-and-star', async (_, repoName) => {
   try {
-    await runCommand(`gh repo create "${repoName}" --template "${TEMPLATE_REPO}" --private --clone=false`, { timeout: 60000 });
+    // 1. Fork the upstream repo
+    const forkCmd = repoName
+      ? `gh repo fork ${UPSTREAM_REPO} --fork-name "${repoName}" --clone=false`
+      : `gh repo fork ${UPSTREAM_REPO} --clone=false`;
+    await runCommand(forkCmd, { timeout: 60000 });
+
+    // 2. Star the upstream repo (PUT /user/starred/{owner}/{repo})
+    try {
+      await runCommand(`gh api -X PUT /user/starred/${UPSTREAM_REPO} --silent`);
+    } catch {
+      // Star failure is non-critical
+    }
+
+    // 3. Get the fork info
     const r = await runCommand('gh api user --jq .login');
     const username = r.stdout.trim();
-    return { success: true, repoUrl: `https://github.com/${username}/${repoName}`, owner: username };
+    const finalName = repoName || UPSTREAM_REPO.split('/')[1];
+    return {
+      success: true,
+      repoUrl: `https://github.com/${username}/${finalName}`,
+      owner: username,
+      repoName: finalName,
+    };
   } catch (err) {
     const msg = err.stderr || err.error || '';
     if (msg.includes('already exists')) {
-      return { success: false, message: '같은 이름의 레포가 이미 있어요. 다른 이름을 입력해주세요.' };
+      return { success: false, message: 'A repo with this name already exists. Please choose a different name.' };
     }
     return { success: false, message: msg };
   }
@@ -261,7 +313,7 @@ ipcMain.handle('clone-repo', async (_, { repoName, targetDir, owner }) => {
   try {
     const clonePath = path.join(targetDir, repoName);
     if (fs.existsSync(clonePath)) {
-      return { success: false, message: '이미 같은 이름의 폴더가 있어요. 다른 위치를 선택해주세요.' };
+      return { success: false, message: 'A folder with this name already exists. Please choose a different location.' };
     }
     const httpsUrl = `https://github.com/${owner}/${repoName}.git`;
     await runCommand(`git clone "${httpsUrl}" "${clonePath}"`, { timeout: 300000 });
@@ -275,7 +327,7 @@ ipcMain.handle('clone-existing', async (_, { repoName, targetDir, owner }) => {
   try {
     const clonePath = path.join(targetDir, repoName);
     if (fs.existsSync(clonePath)) {
-      return { success: false, message: '이미 같은 이름의 폴더가 있어요. 다른 위치를 선택해주세요.' };
+      return { success: false, message: 'A folder with this name already exists. Please choose a different location.' };
     }
     const httpsUrl = `https://github.com/${owner}/${repoName}.git`;
     await runCommand(`git clone "${httpsUrl}" "${clonePath}"`, { timeout: 300000 });
@@ -285,7 +337,7 @@ ipcMain.handle('clone-existing', async (_, { repoName, targetDir, owner }) => {
   }
 });
 
-// === Step 3: 현재 로그인 유저 ===
+// === Step 3: Current user ===
 
 ipcMain.handle('get-gh-username', async () => {
   try {
@@ -296,12 +348,12 @@ ipcMain.handle('get-gh-username', async () => {
   }
 });
 
-// === 공통 ===
+// === Common ===
 
 ipcMain.handle('select-folder', async () => {
   const r = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory', 'createDirectory'],
-    title: '프로젝트를 저장할 폴더를 선택하세요',
+    title: 'Select a folder to save the project',
   });
   if (r.canceled) return { canceled: true };
   return { canceled: false, path: r.filePaths[0] };
@@ -321,9 +373,9 @@ ipcMain.handle('open-in-ide', async (_, { projectPath, ide }) => {
   } catch {
     try {
       shell.openPath(projectPath);
-      const fileManager = IS_WIN ? '탐색기' : 'Finder';
-      return { success: true, message: `${ide} CLI가 없어서 ${fileManager}에서 열었어요. ${ide}에서 직접 폴더를 열어주세요.` };
-    } catch { return { success: false, message: `${ide}를 열 수 없어요.` }; }
+      const fileManager = IS_WIN ? 'Explorer' : 'Finder';
+      return { success: true, message: `${ide} CLI not found. Opened in ${fileManager} instead. Please open the folder manually in ${ide}.` };
+    } catch { return { success: false, message: `Cannot open ${ide}.` }; }
   }
 });
 
@@ -338,11 +390,11 @@ ipcMain.handle('init-project', async (_, { projectPath, repoName }) => {
     line = line.trim();
     if (!line) return;
 
-    if (line.includes('📦 1.') || line.includes('기본 패키지 설치 중')) send({ step: 1, status: 'running', text: '기본 패키지 설치 중...' });
-    else if (line.includes('📦 2.') || line.includes('Supabase')) send({ step: 2, status: 'running', text: 'Supabase 클라이언트 설치 중...' });
-    else if (line.includes('🎨 3.') || line.includes('UI 라이브러리')) send({ step: 3, status: 'running', text: 'UI 라이브러리 설치 중...' });
-    else if (line.includes('🧪 4.') || line.includes('TDD')) send({ step: 4, status: 'running', text: '테스트 환경 설치 중...' });
-    else if (line.includes('🎉 초기화가 완료')) send({ step: 5, status: 'done', text: '모든 설정 완료!' });
+    if (line.includes('📦 1.') || line.includes('기본 패키지 설치 중') || line.includes('Installing base')) send({ step: 1, status: 'running', text: 'Installing packages...' });
+    else if (line.includes('📦 2.') || line.includes('Appwrite')) send({ step: 2, status: 'running', text: 'Installing Appwrite SDK...' });
+    else if (line.includes('🎨 3.') || line.includes('UI')) send({ step: 3, status: 'running', text: 'Installing UI libraries...' });
+    else if (line.includes('🧪 4.') || line.includes('TDD') || line.includes('test')) send({ step: 4, status: 'running', text: 'Setting up test environment...' });
+    else if (line.includes('🎉') || line.includes('완료') || line.includes('complete')) send({ step: 5, status: 'done', text: 'All done!' });
     else if (line.includes('added') && line.includes('packages')) send({ log: line });
     else if (line.includes('⚠️') || line.includes('❌')) send({ step: 0, status: 'warn', text: line.replace(/^.*?(⚠️|❌)\s*/, '') });
 
@@ -364,20 +416,35 @@ ipcMain.handle('init-project', async (_, { projectPath, repoName }) => {
   }
 
   try {
-    send({ step: 1, status: 'running', text: '기본 패키지 설치 중...' });
+    send({ step: 1, status: 'running', text: 'Installing packages...' });
 
     const initScript = path.join(projectPath, 'scripts', 'init.sh');
 
     if (fs.existsSync(initScript)) {
-      const code = await spawnStep('bash', ['scripts/init.sh'], projectPath, { REPO_NAME: repoName || '' });
-      if (code !== 0) {
-        send({ step: 0, status: 'warn', text: 'init.sh 실행 중 오류 발생' });
+      let shellCmd = 'bash';
+      if (IS_WIN) {
+        const gitBashPath = 'C:\\Program Files\\Git\\bin\\bash.exe';
+        shellCmd = fs.existsSync(gitBashPath) ? `"${gitBashPath}"` : 'bash';
+      }
+      const code = await spawnStep(shellCmd, ['scripts/init.sh'], projectPath, { REPO_NAME: repoName || '' });
+      if (code !== 0 && IS_WIN) {
+        send({ step: 1, status: 'running', text: 'Fallback: npm install...' });
+        await spawnStep(IS_WIN ? 'npm.cmd' : 'npm', ['install'], projectPath);
+      } else if (code !== 0) {
+        send({ step: 0, status: 'warn', text: 'init.sh encountered an error' });
       }
     } else {
-      await spawnStep('npm', ['install'], projectPath);
+      await spawnStep(IS_WIN ? 'npm.cmd' : 'npm', ['install'], projectPath);
     }
 
-    send({ step: 5, status: 'done', text: '모든 설정 완료!' });
+    // Auto-set VITE_BASE_PATH in .env if needed
+    const envPath = path.join(projectPath, '.env');
+    const envExamplePath = path.join(projectPath, '.env.example');
+    if (!fs.existsSync(envPath) && fs.existsSync(envExamplePath)) {
+      fs.copyFileSync(envExamplePath, envPath);
+    }
+
+    send({ step: 5, status: 'done', text: 'All done!' });
     return { success: true };
   } catch (err) {
     return { success: false, message: err.message || String(err) };

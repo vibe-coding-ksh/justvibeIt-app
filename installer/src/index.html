@@ -405,7 +405,7 @@
         <div class="step-label">Step 1</div>
         <div class="step-title">환경 확인</div>
         <div class="step-desc">필요한 도구들이 설치되어 있는지 확인합니다.</div>
-        <div id="check-brew" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">Homebrew 확인 중...</span></div>
+        <div id="check-pkgmgr" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">패키지 매니저 확인 중...</span></div>
         <div id="check-git" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">Git 확인 중...</span></div>
         <div id="check-node" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">Node.js 확인 중...</span></div>
         <div id="check-gh" class="status-item"><span class="status-icon"><span class="spinner"></span></span><span class="status-text">GitHub CLI 확인 중...</span></div>
@@ -497,7 +497,7 @@
 
         <div id="init-steps" style="margin-bottom:8px;">
           <div class="init-item" id="is-1"><span class="init-dot">○</span> 기본 패키지 설치</div>
-          <div class="init-item" id="is-2"><span class="init-dot">○</span> Supabase 클라이언트</div>
+          <div class="init-item" id="is-2"><span class="init-dot">○</span> Appwrite SDK</div>
           <div class="init-item" id="is-3"><span class="init-dot">○</span> UI 라이브러리</div>
           <div class="init-item" id="is-4"><span class="init-dot">○</span> 테스트 환경</div>
         </div>
@@ -516,7 +516,7 @@
 
           <div class="status-item info" style="margin-bottom:10px;">
             <span class="status-icon">💡</span>
-            <span class="status-text">Supabase 설정이 필요해요! <code>.env</code> 파일에 URL과 Key를 넣어주세요.</span>
+            <span class="status-text">Appwrite 설정이 필요해요! <code>.env</code> 파일에 Endpoint와 Project ID를 넣어주세요.</span>
           </div>
 
           <div class="field">
@@ -570,33 +570,43 @@
     }
 
     let currentPlatform = 'darwin';
+    let pkgMgrOk = false;
 
     async function runChecks() {
       currentPlatform = await window.api.getPlatform();
       const isWin = currentPlatform === 'win32';
+      const pkgEl = document.getElementById('check-pkgmgr');
+
+      // Package manager check (Homebrew on macOS, winget on Windows)
+      const pkgLabel = isWin ? 'winget' : 'Homebrew';
+      pkgEl.className = 'status-item';
+      pkgEl.innerHTML = `<span class="status-icon"><span class="spinner"></span></span><span class="status-text">${pkgLabel} 확인 중...</span>`;
 
       if (isWin) {
-        document.getElementById('check-brew').style.display = 'none';
+        const wr = await window.api.checkWinget();
+        pkgMgrOk = wr.installed;
       } else {
-        document.getElementById('check-brew').style.display = '';
+        const br = await window.api.checkBrew();
+        pkgMgrOk = br.installed;
       }
 
-      const checks = isWin
-        ? [
-            { id: 'check-git', fn: () => window.api.checkGit(), label: 'Git', installId: 'git' },
-            { id: 'check-node', fn: () => window.api.checkNode(), label: 'Node.js', installId: 'node' },
-            { id: 'check-gh', fn: () => window.api.checkGh(), label: 'GitHub CLI', installId: 'gh' },
-          ]
-        : [
-            { id: 'check-brew', fn: () => window.api.checkBrew(), label: 'Homebrew', installId: 'brew' },
-            { id: 'check-git', fn: () => window.api.checkGit(), label: 'Git', installId: 'git' },
-            { id: 'check-node', fn: () => window.api.checkNode(), label: 'Node.js', installId: 'node', needsBrew: true },
-            { id: 'check-gh', fn: () => window.api.checkGh(), label: 'GitHub CLI', installId: 'gh', needsBrew: true },
-          ];
+      if (pkgMgrOk) {
+        pkgEl.className = 'status-item ok';
+        pkgEl.innerHTML = `<span class="status-icon">✓</span><span class="status-text"><strong>${pkgLabel}</strong> 설치됨</span>`;
+      } else {
+        pkgEl.className = 'status-item fail';
+        pkgEl.innerHTML = `<span class="status-icon">✗</span><span class="status-text">${pkgLabel} 설치 안 됨</span>`;
+      }
 
-      let allGood = true;
+      const checks = [
+        { id: 'check-git', fn: () => window.api.checkGit(), label: 'Git', installId: 'git' },
+        { id: 'check-node', fn: () => window.api.checkNode(), label: 'Node.js', installId: 'node' },
+        { id: 'check-gh', fn: () => window.api.checkGh(), label: 'GitHub CLI', installId: 'gh' },
+      ];
+
+      let allGood = pkgMgrOk;
       const missing = [];
-      let brewOk = isWin;
+      if (!pkgMgrOk) missing.push(isWin ? 'winget' : 'brew');
 
       for (const c of checks) {
         const el = document.getElementById(c.id);
@@ -606,7 +616,6 @@
         if (r.installed) {
           el.className = 'status-item ok';
           el.innerHTML = `<span class="status-icon">✓</span><span class="status-text"><strong>${c.label}</strong> ${r.version ? r.version : '설치됨'}</span>`;
-          if (c.installId === 'brew') brewOk = true;
         } else {
           allGood = false;
           el.className = 'status-item fail';
@@ -618,10 +627,24 @@
       const actionsEl = document.getElementById('install-actions');
       if (missing.length > 0) {
         let html = '';
-        if (missing.includes('brew')) html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('brew')">Homebrew 설치</button>`;
-        if (missing.includes('git')) html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('git')">Git 설치</button>`;
-        if (missing.includes('node')) html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('node')"${!brewOk ? ' disabled' : ''}>Node.js 설치</button>`;
-        if (missing.includes('gh')) html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('gh')"${!brewOk ? ' disabled' : ''}>GitHub CLI 설치</button>`;
+        if (missing.includes('brew')) {
+          html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('brew')">Homebrew 설치</button>`;
+        }
+        if (missing.includes('winget')) {
+          html += `<div class="status-item warn" style="margin-bottom:6px;"><span class="status-icon">⚠️</span><span class="status-text">winget은 Windows 10/11에 기본 포함됩니다. <strong>Microsoft Store</strong>에서 "앱 설치 관리자"를 업데이트해주세요.</span></div>`;
+        }
+        if (missing.includes('git')) {
+          const canAuto = pkgMgrOk;
+          html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('git')">Git 설치${canAuto ? ' (자동)' : ''}</button>`;
+        }
+        if (missing.includes('node')) {
+          const canAuto = pkgMgrOk;
+          html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('node')">Node.js 설치${canAuto ? ' (자동)' : ''}</button>`;
+        }
+        if (missing.includes('gh')) {
+          const canAuto = pkgMgrOk;
+          html += `<button class="btn btn-primary btn-sm btn-block" style="margin-bottom:6px;" onclick="doInstall('gh')">GitHub CLI 설치${canAuto ? ' (자동)' : ''}</button>`;
+        }
         actionsEl.innerHTML = html;
       } else {
         actionsEl.innerHTML = '';
@@ -639,20 +662,25 @@
       const t = map[tool];
       const el = document.getElementById(t.el);
       el.className = 'status-item';
-      el.innerHTML = `<span class="status-icon"><span class="spinner"></span></span><span class="status-text">${t.label} 설치 중...</span>`;
+      el.innerHTML = `<span class="status-icon"><span class="spinner"></span></span><span class="status-text">${t.label} 설치 중... (잠시 기다려주세요)</span>`;
+
+      const actionsEl = document.getElementById('install-actions');
+      actionsEl.querySelectorAll('button').forEach(b => b.disabled = true);
+
       const r = await t.fn();
       if (r.success) {
-        if (r.message) {
+        if (r.message && !r.message.includes('설치 완료')) {
           el.className = 'status-item warn';
           el.innerHTML = `<span class="status-icon">⏳</span><span class="status-text">${r.message}</span>`;
         } else {
           el.className = 'status-item ok';
-          el.innerHTML = `<span class="status-icon">✓</span><span class="status-text"><strong>${t.label}</strong> 설치 완료</span>`;
-          runChecks();
+          el.innerHTML = `<span class="status-icon">✓</span><span class="status-text"><strong>${t.label}</strong> ${r.message || '설치 완료'}</span>`;
         }
+        setTimeout(() => runChecks(), 1000);
       } else {
         el.className = 'status-item fail';
         el.innerHTML = `<span class="status-icon">✗</span><span class="status-text">설치 실패: ${r.message}</span>`;
+        actionsEl.querySelectorAll('button').forEach(b => b.disabled = false);
       }
     }
 
@@ -824,9 +852,10 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner spinner-white"></span> 만드는 중...';
       statusEl.innerHTML = '';
-      const r = await window.api.createFromTemplate(repoName);
+      const r = await window.api.forkAndStar(repoName);
       if (r.success) {
         if (r.owner) ghUsername = r.owner;
+        if (r.repoName) repoName = r.repoName;
         statusEl.className = 'status-item ok';
         statusEl.innerHTML = `<span class="status-icon">✓</span><span class="status-text">프로젝트가 만들어졌어요!</span>`;
         btn.textContent = '다음';

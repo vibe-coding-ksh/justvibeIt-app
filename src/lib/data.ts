@@ -1,58 +1,53 @@
-import { supabase } from './supabase';
+import { databases } from './appwrite';
+import { Query } from 'appwrite';
 import type { PortfolioData, Profile, Project, SiteConfig, ProfileLink } from '@/types';
 
-/**
- * Supabase에서 포트폴리오 데이터를 불러옵니다.
- * 테이블: site_config, profiles, projects
- */
+const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || 'main';
+
 export async function loadPortfolioData(): Promise<PortfolioData> {
-  const [configResult, profileResult, projectsResult] = await Promise.all([
-    supabase.from('site_config').select('*').limit(1).single(),
-    supabase.from('profiles').select('*').limit(1).single(),
-    supabase.from('projects').select('*').order('sort_order', { ascending: true }),
+  const [configResult, profileResult, projectsResult] = await Promise.allSettled([
+    databases.listDocuments(DATABASE_ID, 'site_config', [Query.limit(1)]),
+    databases.listDocuments(DATABASE_ID, 'profiles', [Query.limit(1)]),
+    databases.listDocuments(DATABASE_ID, 'projects', [Query.orderAsc('sort_order')]),
   ]);
 
-  if (configResult.error && configResult.error.code !== 'PGRST116') {
-    throw new Error('사이트 설정을 불러올 수 없어요: ' + configResult.error.message);
-  }
-  if (profileResult.error && profileResult.error.code !== 'PGRST116') {
-    throw new Error('프로필을 불러올 수 없어요: ' + profileResult.error.message);
-  }
-  if (projectsResult.error) {
-    throw new Error('프로젝트를 불러올 수 없어요: ' + projectsResult.error.message);
-  }
+  const configDoc = configResult.status === 'fulfilled' ? configResult.value.documents[0] : null;
+  const profileDoc = profileResult.status === 'fulfilled' ? profileResult.value.documents[0] : null;
+  const projectsDocs = projectsResult.status === 'fulfilled' ? projectsResult.value.documents : [];
 
-  const config: SiteConfig = configResult.data
+  const config: SiteConfig = configDoc
     ? {
-        id: configResult.data.id,
-        site_name: configResult.data.site_name || '내 프로젝트',
-        description: configResult.data.description || '',
-        theme: configResult.data.theme || 'light',
+        id: configDoc.$id,
+        site_name: configDoc.site_name || 'My Project',
+        description: configDoc.description || '',
+        theme: configDoc.theme || 'light',
       }
-    : { site_name: '내 프로젝트', description: '', theme: 'light' };
+    : { site_name: 'My Project', description: '', theme: 'light' };
 
-  const rawLinks = profileResult.data?.links;
   let parsedLinks: ProfileLink[] = [];
-  if (Array.isArray(rawLinks)) {
-    parsedLinks = rawLinks as ProfileLink[];
-  } else if (typeof rawLinks === 'string') {
-    try { parsedLinks = JSON.parse(rawLinks); } catch { parsedLinks = []; }
+  if (profileDoc?.links) {
+    const rawLinks = profileDoc.links;
+    if (Array.isArray(rawLinks)) {
+      parsedLinks = rawLinks as ProfileLink[];
+    } else if (typeof rawLinks === 'string') {
+      try { parsedLinks = JSON.parse(rawLinks); } catch { parsedLinks = []; }
+    }
   }
 
-  const profile: Profile = profileResult.data
+  const profile: Profile = profileDoc
     ? {
-        id: profileResult.data.id,
-        name: profileResult.data.name || '이름을 설정해주세요',
-        title: profileResult.data.title || '',
-        bio: profileResult.data.bio || '',
-        avatar: profileResult.data.avatar || '',
+        id: profileDoc.$id,
+        name: profileDoc.name || 'Set your name',
+        title: profileDoc.title || '',
+        bio: profileDoc.bio || '',
+        avatar: profileDoc.avatar || '',
         links: parsedLinks,
-        user_id: profileResult.data.user_id,
+        user_id: profileDoc.user_id,
       }
-    : { name: '이름을 설정해주세요', title: '', bio: '', avatar: '', links: [] };
+    : { name: 'Set your name', title: '', bio: '', avatar: '', links: [] };
 
-  const projects: Project[] = (projectsResult.data || []).map((p) => ({
-    id: p.id,
+  const projects: Project[] = projectsDocs.map((p) => ({
+    id: p.$id,
     title: p.title || '',
     description: p.description || '',
     image: p.image || '',
@@ -60,16 +55,12 @@ export async function loadPortfolioData(): Promise<PortfolioData> {
     link: p.link || '',
     sort_order: p.sort_order,
     user_id: p.user_id,
-    created_at: p.created_at,
+    created_at: p.$createdAt,
   }));
 
   return { config, profile, projects };
 }
 
-/**
- * 이미지 URL을 반환합니다.
- * Supabase Storage URL(https://)이면 그대로, 아니면 로컬 경로로 처리합니다.
- */
 export function getImageUrl(path: string): string {
   if (!path) return '';
   if (path.startsWith('http')) return path;

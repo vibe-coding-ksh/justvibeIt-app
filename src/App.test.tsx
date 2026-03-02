@@ -1,58 +1,28 @@
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import App from './App';
 
-vi.mock('./lib/supabase', () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({
-        data: {
-          session: {
-            user: {
-              id: 'test-id',
-              email: 'test@example.com',
-              user_metadata: { full_name: '테스트 유저' },
-            },
-          },
-        },
-      }),
-      onAuthStateChange: vi.fn().mockReturnValue({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      }),
-      signOut: vi.fn(),
-    },
+vi.mock('./lib/appwrite', () => ({
+  account: {
+    get: vi.fn().mockRejectedValue(new Error('No session')),
   },
+  databases: {},
+  storage: {},
+  client: {},
 }));
 
-vi.mock('./lib/data', () => ({
-  loadPortfolioData: vi.fn().mockResolvedValue({
-    config: { site_name: '내 프로젝트', description: '테스트', theme: 'light' },
-    profile: {
-      name: '테스트 유저',
-      title: '개발자',
-      bio: '안녕하세요',
-      avatar: '',
-      links: [],
-    },
-    projects: [],
-  }),
-  getImageUrl: vi.fn((path: string) => path),
-}));
-
-vi.mock('./lib/storage', () => ({
-  uploadImage: vi.fn(),
-  deleteImage: vi.fn(),
-  getStorageUrl: vi.fn(),
-  isStorageUrl: vi.fn(),
+vi.mock('appwrite', () => ({
+  OAuthProvider: { Google: 'google' },
+  Client: vi.fn(),
+  Account: vi.fn(),
+  Databases: vi.fn(),
+  Storage: vi.fn(),
 }));
 
 describe('App', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('로그인된 상태에서 메인 페이지를 표시한다', async () => {
-    const { default: App } = await import('./App');
+  it('renders login when not authenticated', async () => {
     render(<App />);
-    expect(await screen.findByText('테스트 유저')).toBeInTheDocument();
+    const loginButton = await screen.findByText(/Sign in with Google/i);
+    expect(loginButton).toBeInTheDocument();
   });
 });
